@@ -5,22 +5,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
-
 import android.app.Activity;
-import android.content.Context;
-import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.Toast;
+import com.parse.Parse;
+import com.parse.ParseObject;
+
 
 public class MainActivity extends Activity {
 
@@ -28,12 +25,26 @@ public class MainActivity extends Activity {
     private CameraPreview mPreview;
     public static final int MEDIA_TYPE_IMAGE = 1;
 
-    /*
-    Called when the app is opened! Creates and sets variables
-     */
+    private final static String TAG = "KevinsMessage";
+
+    //onCreate
+    //Called when the app is opened! Creates and sets variables
+    //---------------------------------------------------
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Enable Local Datastore.
+//        Parse.enableLocalDatastore(this);
+//        Parse.initialize(this, "jzne3U0W0NxkjF24gmuI0zZfZ0sRcXga9ag69ZfT", "84PuDG6RhBugWTautTFBdXVk3hb55a3PXd7O2eKr");
+
+        //Create Parse Object
+//        ParseObject testObject = new ParseObject("TestObject");
+//        testObject.put("foo", "bar");
+//        testObject.saveInBackground();
+
+        Log.d(TAG, "OnCreate");
 
         //Set the content view to be the activity_main.xml file
         setContentView(R.layout.activity_main);
@@ -49,12 +60,15 @@ public class MainActivity extends Activity {
         FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
         preview.addView(mPreview);
 
+
         final PictureCallback mPicture = new PictureCallback() {
+
+            @Override
             public void onPictureTaken(byte[] data, Camera camera) {
 
                 File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-
-                if (pictureFile == null){
+                if (pictureFile == null) {
+                    Log.d(TAG, "Error creating media file, check storage permissions: ");
                     return;
                 }
 
@@ -62,14 +76,14 @@ public class MainActivity extends Activity {
                     FileOutputStream fos = new FileOutputStream(pictureFile);
                     fos.write(data);
                     fos.close();
-                    MediaStore.Images.Media.insertImage(getContentResolver(), pictureFile.getAbsolutePath(), pictureFile.getName(), pictureFile.getName());
                 } catch (FileNotFoundException e) {
-
+                    Log.d(TAG, "File not found: " + e.getMessage());
                 } catch (IOException e) {
-
+                    Log.d(TAG, "Error accessing file: " + e.getMessage());
                 }
             }
         };
+
 
         // Add a listener to the Capture button
         captureButton.setOnClickListener(
@@ -84,12 +98,79 @@ public class MainActivity extends Activity {
         );
     }
 
-    /*
-    A safe way to get an instance of the Camera object.
-    */
+
+
+    //onStart
+    //--------------------------------------------------
+
+    @Override
+    protected void onStart(){
+        super.onStart();
+        Log.d(TAG, "onStart");
+    }
+
+    //onPause
+    //Called when the app is paused by either pressing the BACK or HOME key
+    //--------------------------------------------------
+
+//    @Override
+    protected void onPause() {
+        super.onPause();
+
+        Log.d(TAG, "onPause");
+
+        //isFinishing() called when app is paused and closing!
+        if (this.isFinishing()){
+            //Release the camera when app is closed to background or exited
+            releaseCamera();
+            mCamera = null;
+        }
+
+    }
+
+    //onStop
+    //--------------------------------------------------
+
+    protected void onStop(){
+        super.onStop();
+        Log.d(TAG, "onStop");
+       //releaseCamera();
+    }
+
+    //onDestroy
+    //--------------------------------------------------
+
+    protected void onDestroy(){
+        super.onDestroy();
+        Log.d(TAG, "onDestroy");
+        releaseCamera();
+    }
+
+    //onResume
+    //---------------------------------------------------
+
+    protected void onResume(){
+        super.onResume();
+        Log.d(TAG, "onResume");
+
+    }
+
+    //onRestart
+    //---------------------------------------------------
+
+    @Override
+    protected void onRestart(){
+        super.onRestart();
+        Log.d(TAG, "onRestart");
+    }
+
+    //Create camera instance, a safe way to get an instance of the Camera object.
+    //---------------------------------------------------
+
     public static Camera getCameraInstance(){
         Camera c = null;
         try {
+            Log.d(TAG, "Open Camera");
             c = Camera.open(); // attempt to get a Camera instance
         }
         catch (Exception e){
@@ -98,48 +179,21 @@ public class MainActivity extends Activity {
         return c; // returns null if camera is unavailable
     }
 
-    /*
-    Called when the app is paused by either pressing the BACK or HOME key
-     */
-    @Override
-    protected void onPause() {
-        super.onPause();
+    // Releases the camera
+    //---------------------------------------------------
 
-        //isFinishing() called when app is paused and closing!
-        if (this.isFinishing()){
-            //Release the camera when app is closed to background or exited
-            releaseCamera();
-        }
-
-        //*Having this line here makes the camera preview not show again after pressing the HOME key*
-        //However, without this line, the camera wont be released when the HOME key is pressed so
-        //opening the camera app after shows the message "Cannot connect to camera!"
-        releaseCamera();
-    }
-
-    protected void onStop(){
-        super.onStop();
-        releaseCamera();
-    }
-
-    protected void onDestroy(){
-        super.onDestroy();
-        releaseCamera();
-    }
-
-    /*
-    Releases the camera
-     */
     private void releaseCamera(){
         if (mCamera != null){
+            Log.d(TAG, "onRelease");
             mCamera.release(); // release the camera for other applications
             mCamera = null;
         }
     }
 
-    /*
-    Create a File for saving an image or video
-    */
+
+    //Create a File for saving an image or video
+    //---------------------------------------------------
+
     private  File getOutputMediaFile(int type){
         // To be safe, you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this.
@@ -169,4 +223,6 @@ public class MainActivity extends Activity {
 
         return mediaFile;
     }
+
+    //---------------------------------------------------
 }
